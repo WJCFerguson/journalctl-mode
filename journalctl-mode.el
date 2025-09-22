@@ -488,28 +488,31 @@ It controls the formatting of the journal entries that are shown.")
 			     "p'"))))
     (with-current-buffer (get-buffer-create "*journalctl*")
       (switch-to-buffer "*journalctl*")
-      (setq buffer-read-only nil)
-      (erase-buffer)
+      (let ((inhibit-read-only t))
+        (setq buffer-read-only nil)
+        (erase-buffer))
       (setq journalctl-process
-	    (make-process
-	     :name "journalctl"
-	     :buffer "*journalctl*"
-	     :command command
-	     :stderr (get-buffer-create "*journalctl-errors*")
-	     :file-handler t
-	     :sentinel #'ignore
-	     :filter (lambda (proc string)
-		       (when (buffer-live-p (process-buffer proc))
-			 (with-current-buffer (process-buffer proc)
-			   (setq buffer-read-only nil)
-			   (let ((moving (= (point) (process-mark proc))))
-			     (save-excursion
-                               (goto-char (process-mark proc))
-                               (insert string)
-                               (set-marker (process-mark proc) (point)))
-			     (if moving (goto-char (process-mark proc)))
-			     (goto-char (point-min)))
-			   (journalctl-mode)))))))))
+            (make-process
+             :name "journalctl"
+             :buffer "*journalctl*"
+             :command command
+             :stderr (get-buffer-create "*journalctl-errors*")
+             :file-handler t
+             :sentinel #'ignore
+             :filter (lambda (proc string)
+                       (when (buffer-live-p (process-buffer proc))
+                         (with-current-buffer (process-buffer proc)
+                           (let ((inhibit-read-only t))
+                             (setq buffer-read-only nil)
+                             (let ((moving (= (point) (process-mark proc))))
+                               (save-excursion
+                                 (goto-char (process-mark proc))
+                                 (insert string)
+                                 (set-marker (process-mark proc) (point)))
+                               (if moving (goto-char (process-mark proc)))
+                               (goto-char (point-min))))
+                           (journalctl-mode)
+                           (setq buffer-read-only t)))))))))
 
 (defun journalctl--follow (transient-opts)
   "Run journalctl with given TRANSIENT-OPTS and follow the output."
