@@ -648,8 +648,8 @@ Move to next chunk when top of frame is reached."
     map)
   "Keymap for journalctl mode.")
 
-(defvar mode-line-process nil "Process status in the mode line.")
-(defvar font-lock-defaults nil "Defaults for Font Lock mode specified by the major mode.")
+(defvar mode-line-process)
+(defvar font-lock-defaults)
 
 ;;;###autoload
 (defun journalctl ()
