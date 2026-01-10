@@ -418,6 +418,7 @@ It controls the formatting of the journal entries that are shown.")
     (journalctl-transient:--unit)
     (journalctl-transient:--user-unit)
     (journalctl-transient:--facility)
+    (journalctl-transient:--priority)
     ]
    ["Filters"
     (journalctl-transient:--since)
