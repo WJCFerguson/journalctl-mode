@@ -1,13 +1,20 @@
 #+TITLE: journalctl-mode.el
 #+AUTHOR: Sebastian Meisel
 #+EMAIL: sebastian.meisel@gmail.com
-#+VERSION: 1.0
+#+VERSION: 1.1
+#+STARTUP: indent
+#+LANGUAGE: en
+#+OPTIONS: toc:nil num:nil ^:nil -:nil f:t *:t <:t
+#+TITLE: journalctl-mode.el
+#+AUTHOR: Sebastian Meisel
+#+EMAIL: sebastian.meisel@gmail.com
+#+VERSION: 1.1
 #+STARTUP: indent
 #+LANGUAGE: en
 #+OPTIONS: toc:nil num:nil ^:nil -:nil f:t *:t <:t
 
 * Introduction
-  This Emacs major mode is designed for viewing the output from systemd's journalctl within Emacs. It provides a convenient way to interact with journalctl logs, including features like fontification, chunked loading for performance, and custom keyword highlighting.
+  This Emacs major mode is designed for viewing the output from systemd's journalctl within Emacs. It provides a convenient way to interact with journalctl logs, including fontification, chunked loading for performance, asynchronous journalctl processes, follow mode, and a transient interface for building queries.
 
 [[file:journalctl.v1.1.gif]]
 
@@ -18,7 +25,9 @@
     (require 'journalctl-mode)
   #+END_SRC
 
-  Alternatively, you can install =journalctl-mode= using the =use-package= macro with Quelpa for automatic installation from the GitHub repository:
+  The mode requires Emacs 27.1 or newer, the Emacs Lisp libraries =transient= and =array=, and a system with =journalctl= and =systemctl= available.
+
+  Alternatively, if =journalctl-mode= is available through one of your configured package archives, you can install it using =use-package=:
 
   #+BEGIN_SRC emacs-lisp
 (use-package journalctl-mode
@@ -43,14 +52,36 @@ or with use-package:
 
 
 * Features
-  - Fontification: Customize the appearance of log levels with faces.
+  - Fontification: Customize the appearance of errors, warnings, starting and finished processes, timestamps, hosts, and process names with faces.
   - Chunked Loading: Load journalctl output in manageable chunks for better performance.
-  - Keyword Highlighting: Define custom keywords for error, warning, and other log levels.
-  - Follow Mode: Simulate tail -f functionality to keep up with new log entries.
+  - Asynchronous Processes: journalctl output is collected asynchronously, so Emacs stays responsive while the command is running.
+  - Keyword Highlighting: Define custom keywords for error, warning, starting, and finished log messages.
+  - Transient Menu: Build journalctl queries interactively using output, source, constraint, and filter options.
+  - Follow Mode: Run journalctl with =-f= and keep up with new log entries asynchronously.
+  - Completion: Select known system units, user units, boots, output fields, facilities, output formats, and priority ranges from dynamically generated lists.
 
 * Usage
   Once installed, =journalctl-mode= can be invoked with =M-x journalctl=.
-  The mode provides a transient interface for journalctl command-line options, allowing for dynamic and flexible log viewing.
+
+  The command initially loads up to 250 journal entries into the =*journalctl*= buffer and opens the transient menu. The menu allows journalctl command-line options to be combined dynamically and the query to be rerun without leaving Emacs.
+
+  The transient menu contains the following groups:
+
+  - Output: =--all=, =--no-full=, =--merge=, =--field=, =--quiet=, =--utc=, and =--output=.
+  - Sources: =--machine=, =--directory=, =--file=, =--root=, =--image=, and =--namespace=.
+  - Constraint: kernel, system or user messages, boot, identifier, unit, user unit, facility, and priority.
+  - Filters: =--since=, =--until=, reverse output, catalog explanations, line limit, and grep pattern.
+
+  From the transient menu:
+
+  | Key | Action                                      |
+  |-----+---------------------------------------------|
+  | SPC | Run journalctl and keep the menu open       |
+  | RET | Run journalctl and close the menu           |
+  | f   | Run journalctl in follow mode               |
+  | q   | Quit the journalctl session                 |
+
+  Follow mode starts =journalctl -f= with the currently selected transient options. The initial number of lines used for follow mode is controlled by =journalctl-follow-lines=. To keep the buffer from growing without limit, older lines are removed as new output arrives.
 
 * Customization
   Customize the mode to your liking by setting the following variables:
@@ -60,18 +91,21 @@ or with use-package:
   - =journalctl-warn-keywords=: List of keywords to highlight as warnings.
   - =journalctl-starting-keywords=: Keywords for starting processes.
   - =journalctl-finished-keywords=: Keywords for finished processes.
-  - =journalctl-follow-freq=: Frequency for updating in follow mode.
-  - =journalctl-follow-lines=: Number of lines to show in follow mode.
-  - =journalctl-default-options:= List of default options for journalctl on start.
+  - =journalctl-follow-lines=: Number of initial lines to show in follow mode (default ="240"=).
+  - =journalctl-default-options=: List of default options in the transient menu (default =("--lines=240")=).
+
+  The faces =journalctl-error-face=, =journalctl-warning-face=, =journalctl-starting-face=, =journalctl-finished-face=, =journalctl-timestamp-face=, =journalctl-host-face=, and =journalctl-process-face= can also be customized.
 
 * Key Bindings
-  | Key   | Action                             |
-  |-------+------------------------------------|
-  | n     | Load next chunk of journalctl output |
-  | p     | Load previous chunk of journalctl output |
-  | C-v   | Scroll up in the buffer             |
-  | M-v   | Scroll down in the buffer           |
-  | q     | Quit journalctl mode                |
+  | Key   | Action                                                   |
+  |-------+----------------------------------------------------------|
+  | +     | Rerun journalctl and open the transient menu             |
+  | -     | Rerun journalctl and open the transient menu             |
+  | n     | Load next chunk of journalctl output                     |
+  | p     | Load previous chunk of journalctl output                 |
+  | C-v   | Move 25 lines forward; load next chunk when necessary    |
+  | M-v   | Move 25 lines backward; load previous chunk when necessary |
+  | q     | Quit journalctl mode                                     |
 
 * Other Packages
 There is another package [[https://github.com/WJCFerguson/journalctl][journalctl]] (rather than journalctl-mode) by James Ferguson that fetches and interleaves JSON data using multiple simultaneous asynchronous journalctl queries, while mine offers a UI for query-building and chunked asynchronous data loading.
@@ -85,6 +119,6 @@ There is another package [[https://github.com/WJCFerguson/journalctl][journalctl
 
 * Support
   For support, feedback, or to contribute to the project, please visit the homepage at [[https://github.com/SebastianMeisel/journalctl-mode]].
-
+  
 * Acknowledgements
   Thanks to all contributors and users for their support and feedback which continue to improve this mode.
